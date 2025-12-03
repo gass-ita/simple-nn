@@ -1,4 +1,4 @@
-#include "layer.h"
+#include "nnLayer.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
@@ -128,6 +128,18 @@ void nnPrintLayerInfo(const nnLayer *layer)
     printf("Neurons: %d\n", layer->neuron_count);
     printf("Inputs per Neuron: %d\n", layer->input_count);
     printf("Activation Function: %d\n", layer->activationFunction);
+    // print weights and biases
+    for (int i = 0; i < layer->neuron_count; i++)
+    {
+        printf(" Neuron %d: Bias = %f | Weights = [", i, layer->bias[i]);
+        for (int j = 0; j < layer->input_count; j++)
+        {
+            printf("%f", layer->weights[i][j]);
+            if (j < layer->input_count - 1)
+                printf(", ");
+        }
+        printf("]\n");
+    }
 }
 
 // ACTIVATION FUNCTION IMPLEMENTATIONS

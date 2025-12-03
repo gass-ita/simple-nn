@@ -1,3 +1,7 @@
+// include guard
+#ifndef NNLAYER_H
+#define NNLAYER_H
+
 #define MAX_NEURONS 1024
 
 typedef enum ActivationFunction
@@ -5,7 +9,8 @@ typedef enum ActivationFunction
     ACTIVATION_RELU,
     ACTIVATION_SIGMOID,
     ACTIVATION_TANH,
-    ACTIVATION_LEAKYRELU
+    ACTIVATION_LEAKYRELU,
+    ACTIVATION_LINEAR,
 } nnActivationFunction;
 
 typedef struct nnLayer
@@ -30,3 +35,5 @@ void backward(nnLayer *layer, double *outputGradient, double *inputGradient, dou
 double activate(nnActivationFunction func, double x);
 double activateDerivative(nnActivationFunction func, double outputVal);
 void init_layer_random(nnLayer *layer);
+
+#endif // NNLAYER_H
