@@ -108,12 +108,15 @@ void backward(nnLayer *layer, double *outputGradient, double *inputGradient, dou
 
 void nnFreeLayer(nnLayer *layer)
 {
-    if (layer != NULL)
+    if (!layer)
     {
-        free(layer->inputs);
-        free(layer->outputs);
-        free(layer);
+        return;
     }
+
+    free(layer->inputs);
+    free(layer->outputs);
+    free(layer);
+    return;
 }
 
 void nnPrintLayerInfo(const nnLayer *layer)

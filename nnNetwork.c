@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <time.h>
 
 nnNetwork *nnCreateNetwork()
 {
@@ -27,6 +28,107 @@ int addLayerToNetwork(nnNetwork *network, nnLayer *layer)
     return 0;
 }
 
+// Binary Export (Deep Copy to File)
+int exportNetwork(nnNetwork *network, const char *filename)
+{
+    FILE *f = fopen(filename, "wb");
+    if (f == NULL)
+    {
+        fprintf(stderr, "Error opening file %s for writing\n", filename);
+        return 1;
+    }
+
+    // 1. Write Network Metadata
+    fwrite(&network->layer_count, sizeof(int), 1, f);
+
+    // 2. Loop through layers and write Deep Data
+    for (int i = 0; i < network->layer_count; i++)
+    {
+        nnLayer *layer = network->layers[i];
+
+        // A. Write Layer Metadata
+        fwrite(&layer->neuron_count, sizeof(int), 1, f);
+        fwrite(&layer->input_count, sizeof(int), 1, f);
+        int activation = (int)layer->activationFunction;
+        fwrite(&activation, sizeof(int), 1, f);
+
+        // B. Write Biases (Contiguous memory, single write)
+        fwrite(layer->bias, sizeof(double), layer->neuron_count, f);
+
+        // C. Write Weights (2D array, write row by row)
+        for (int n = 0; n < layer->neuron_count; n++)
+        {
+            fwrite(layer->weights[n], sizeof(double), layer->input_count, f);
+        }
+    }
+
+    fclose(f);
+    printf("Network exported to %s (Binary)\n", filename);
+    return 0;
+}
+
+// Binary Import (Rebuild from File)
+nnNetwork *importNetwork(const char *filename)
+{
+    FILE *f = fopen(filename, "rb");
+    if (f == NULL)
+    {
+        fprintf(stderr, "Error opening file %s for reading\n", filename);
+        return NULL;
+    }
+
+    nnNetwork *network = nnCreateNetwork();
+    if (!network)
+    {
+        fclose(f);
+        return NULL;
+    }
+
+    // 1. Read Network Metadata
+    int layer_count = 0;
+    if (fread(&layer_count, sizeof(int), 1, f) != 1)
+    {
+        fprintf(stderr, "Failed to read layer count\n");
+        fclose(f);
+        return NULL; // Should probably free network here
+    }
+
+    // 2. Rebuild Layers
+    for (int i = 0; i < layer_count; i++)
+    {
+        int neuron_count, input_count, activation_val;
+
+        // A. Read Layer Metadata
+        fread(&neuron_count, sizeof(int), 1, f);
+        fread(&input_count, sizeof(int), 1, f);
+        fread(&activation_val, sizeof(int), 1, f);
+
+        // B. Create the layer structure in memory
+        nnLayer *layer = nnCreateLayer(neuron_count, input_count, (nnActivationFunction)activation_val);
+        if (!layer)
+        {
+            fclose(f);
+            return NULL; // Should handle cleanup
+        }
+
+        // C. Read Biases
+        fread(layer->bias, sizeof(double), neuron_count, f);
+
+        // D. Read Weights
+        for (int n = 0; n < neuron_count; n++)
+        {
+            fread(layer->weights[n], sizeof(double), input_count, f);
+        }
+
+        // Add reconstructed layer to network
+        addLayerToNetwork(network, layer);
+    }
+
+    fclose(f);
+    printf("Network imported from %s successfully (Binary).\n", filename);
+    return network;
+}
+
 void train(nnNetwork *network, double **target_input, double **target_output, int target_count, double learning_rate, int epochs)
 {
     int layer_count = network->layer_count;
@@ -40,9 +142,11 @@ void train(nnNetwork *network, double **target_input, double **target_output, in
     double prev_layer_grads[MAX_NEURONS];
 
     printf("Inizio training per %d epoche su %d esempi...\n", epochs, target_count);
-
+    clock_t total_start_time = clock();
     for (int epoch = 0; epoch < epochs; epoch++)
     {
+        clock_t epoch_start_time = clock();
+
         double total_loss = 0.0;
 
         // Loop su ogni esempio del dataset (SGD)
@@ -90,18 +194,47 @@ void train(nnNetwork *network, double **target_input, double **target_output, in
                 memcpy(next_layer_grads, prev_layer_grads, curr_layer->input_count * sizeof(double));
             }
         }
+        // --- Calcoli Statistiche Epoca ---
 
-        // Calcolo loss media per l'epoca (MSE)
+        // 1. Loss Media
         double average_loss = total_loss / target_count;
-        if ((epoch + 1) % 100 == 0 || epoch == 0)
-        { // Stampa ogni 100 epoche
-            printf("Epoch %d/%d - Loss (MSE): %f\n", epoch + 1, epochs, average_loss);
+
+        // 2. Tempo trascorso in questa epoca
+        clock_t now = clock();
+        double epoch_duration = (double)(now - epoch_start_time) / CLOCKS_PER_SEC;
+
+        // 3. Tempo totale trascorso dall'inizio
+        double total_elapsed = (double)(now - total_start_time) / CLOCKS_PER_SEC;
+
+        // 4. Stima ETA (basata sulla media del tempo per epoca finora)
+        double avg_time_per_epoch = total_elapsed / (epoch + 1);
+        int remaining_epochs = epochs - (epoch + 1);
+        double eta_seconds = avg_time_per_epoch * remaining_epochs;
+
+        // Formattazione ETA in ore/min/sec per leggibilità
+        int eta_h = (int)eta_seconds / 3600;
+        int eta_m = ((int)eta_seconds % 3600) / 60;
+        int eta_s = (int)eta_seconds % 60;
+
+        // 5. Percentuale completamento
+        double progress = ((double)(epoch + 1) / epochs) * 100.0;
+
+        // Stampa (puoi cambiare la condizione % 1 per stampare meno frequentemente)
+        if ((epoch + 1) % 1 == 0 || epoch == 0)
+        {
+            printf("Epoch %d/%d [%.1f%%] | Loss: %.6f | Time: %.2fs | ETA: %02d:%02d:%02d\n",
+                   epoch + 1,
+                   epochs,
+                   progress,
+                   average_loss,
+                   epoch_duration,
+                   eta_h, eta_m, eta_s);
         }
     }
 
     // Pulizia memoria temporanea
 
-    printf("Training completato.\n");
+    printf("Training completed\n");
 }
 
 void predict(nnNetwork *network, double *input, double *output)
@@ -117,4 +250,19 @@ void predict(nnNetwork *network, double *input, double *output)
 
     // Copiamo l'output finale
     memcpy(output, current_input, network->layers[network->layer_count - 1]->neuron_count * sizeof(double));
+}
+
+void nnFreeNetwork(nnNetwork *network)
+{
+    if (!network)
+    {
+        return;
+    }
+
+    for (int i = 0; i < network->layer_count; i++)
+    {
+        nnFreeLayer(network->layers[i]);
+    }
+
+    free(network);
 }
