@@ -141,7 +141,7 @@ void train(nnNetwork *network, double **target_input, double **target_output, in
     double next_layer_grads[MAX_NEURONS];
     double prev_layer_grads[MAX_NEURONS];
 
-    printf("Inizio training per %d epoche su %d esempi...\n", epochs, target_count);
+    printf("Starting training %d epochs on %d samples...\n", epochs, target_count);
     clock_t total_start_time = clock();
     for (int epoch = 0; epoch < epochs; epoch++)
     {

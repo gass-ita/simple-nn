@@ -120,7 +120,7 @@ void evaluate_accuracy(nnNetwork *network, double **inputs, double **targets, in
         }
     }
     double acc = (double)correct / samples * 100.0;
-    printf(">>> Risultato: %.2f%% (%d/%d corretti)\n", acc, correct, samples);
+    printf(">>> Result: %.2f%% (%d/%d correct)\n", acc, correct, samples);
 }
 
 int main()
@@ -164,11 +164,10 @@ int main()
     train(network, train_inputs, train_targets, TRAIN_SAMPLES, LR, EPOCHS);
     exportNetwork(network, MODEL_BAK);
 
-test:
     evaluate_accuracy(network, train_inputs, train_targets, TRAIN_SAMPLES, "TRAIN");
 
     free_data(train_inputs, train_targets, TRAIN_SAMPLES);
-
+test:
     double **test_inputs = NULL;
     double **test_targets = NULL;
 
