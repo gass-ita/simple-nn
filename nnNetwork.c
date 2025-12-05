@@ -29,6 +29,7 @@ int addLayerToNetwork(nnNetwork *network, nnLayer *layer)
 }
 
 // Binary Export (Deep Copy to File)
+// WARNING: This function is architecture dependent
 int nnDumpNetwork(nnNetwork *network, const char *filename)
 {
     FILE *f = fopen(filename, "wb");
@@ -68,6 +69,7 @@ int nnDumpNetwork(nnNetwork *network, const char *filename)
 }
 
 // Binary Import (Rebuild from File)
+// WARNING: This function is architecture dependent
 nnNetwork *nnLoadNetwork(const char *filename)
 {
     FILE *f = fopen(filename, "rb");
