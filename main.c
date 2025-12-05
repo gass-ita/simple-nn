@@ -83,7 +83,7 @@ void load_mnist_data(const char *filename, int samples, double ***inputs, double
     printf("Loading completed.\n");
 }
 
-int get_predicted_digit(double *output_array, int size)
+int get_predicted_digit(double *output_array, int size, double *percentage)
 {
     int max_index = 0;
     double max_val = output_array[0];
@@ -94,6 +94,10 @@ int get_predicted_digit(double *output_array, int size)
             max_val = output_array[i];
             max_index = i;
         }
+    }
+    if (percentage != NULL)
+    {
+        *percentage = max_val;
     }
     return max_index;
 }
@@ -107,9 +111,10 @@ void evaluate_accuracy(nnNetwork *network, double **inputs, double **targets, in
     {
         double p_out[10];
         predict(network, inputs[i], p_out);
+        double percentage;
 
-        int p = get_predicted_digit(p_out, 10);
-        int t = get_predicted_digit(targets[i], 10);
+        int p = get_predicted_digit(p_out, 10, &percentage);
+        int t = get_predicted_digit(targets[i], 10, NULL);
 
         if (p == t)
             correct++;
@@ -117,7 +122,7 @@ void evaluate_accuracy(nnNetwork *network, double **inputs, double **targets, in
         // Show some data for a visual output
         if (i % 1000 == 0)
         {
-            printf("Sample %4d: Pred: %d | Real: %d %s\n", i, p, t, (p == t) ? "(OK)" : "(FAIL)");
+            printf("Sample %4d: Pred: %d (Confidence: %.2f%%) | Real: %d %s\n", i, p, percentage * 100.0, t, (p == t) ? "(OK)" : "(FAIL)");
         }
     }
     double acc = (double)correct / samples * 100.0;
@@ -227,15 +232,13 @@ test:
     double *image;
     int w;
     int h;
+    double percentage;
     if (!load_pgm(CUSTOM_PGM, &image, &w, &h, 1))
     {
         double o[10];
         predict(network, image, o);
-        for (int i = 0; i < 10; i++)
-        {
-            printf("Digit %d: %.4f\n", i, o[i]);
-        }
-        printf("Predicted digit: %d\n", get_predicted_digit(o, 10));
+        int guess = get_predicted_digit(o, 10, &percentage);
+        printf("Predicted digit: %d (Confidence: %.2f%%)\n", guess, percentage * 100.0);
     }
 
     // --- FINAL CLEANUP ---
