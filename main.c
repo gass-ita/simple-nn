@@ -9,6 +9,7 @@
 #define MODEL_BAK "trained_network.bin"
 #define TRAIN_SET "mnist_train.csv"
 #define TEST_SET "mnist_test.csv"
+#define CUSTOM_PGM "example.pgm"
 #define TRAIN_SAMPLES 60000
 #define TEST_SAMPLES 10000
 
@@ -113,20 +114,63 @@ void evaluate_accuracy(nnNetwork *network, double **inputs, double **targets, in
         if (p == t)
             correct++;
 
-        // Mostra solo i primi 5 risultati per verifica visiva
-        if (i < 5)
+        // Show some data for a visual output
+        if (i % 1000 == 0)
         {
-            printf("Sample %d: Pred: %d | Real: %d %s\n", i, p, t, (p == t) ? "(OK)" : "(FAIL)");
+            printf("Sample %4d: Pred: %d | Real: %d %s\n", i, p, t, (p == t) ? "(OK)" : "(FAIL)");
         }
     }
     double acc = (double)correct / samples * 100.0;
     printf(">>> Result: %.2f%% (%d/%d correct)\n", acc, correct, samples);
 }
 
+/*
+Load a PGM image from file into a normalized double array, values [0..1], optionally inverted.
+*/
+int load_pgm(const char *file_name, double **image, int *width, int *height, int invert)
+{
+    printf("opening %s\n", file_name);
+    FILE *fp = fopen(file_name, "rb");
+    if (!fp)
+    {
+        fprintf(stderr, "Error opening %s", file_name);
+        return 1;
+    }
+    char t;
+    fscanf(fp, "%c%c\n", &t, &t);
+    int w, h;
+    fscanf(fp, "%d %d\n", &w, &h);
+    *width = w;
+    *height = h;
+    int depth;
+    fscanf(fp, "%d\n", &depth);
+    printf("image size (%d, %d) with depth %d\n", w, h, depth);
+
+    *image = (double *)malloc(w * h * sizeof(double));
+
+    // start reading binary
+    for (int y = 0; y < h; y++)
+    {
+        for (int x = 0; x < w; x++)
+        {
+            unsigned char pix;
+            fread(&pix, sizeof(unsigned char), 1, fp);
+            if (!invert)
+                (*image)[y * w + x] = (double)pix / 255.0;
+            else
+                // invert the color linearly (black background)
+                (*image)[y * w + x] = 1.0 - ((double)pix / 255.0);
+        }
+    }
+    fclose(fp);
+    return 0;
+}
+
 int main()
 {
+
     srand(time(NULL));
-    nnNetwork *network = importNetwork(MODEL_BAK);
+    nnNetwork *network = nnLoadNetwork(MODEL_BAK);
 
     if (network)
     {
@@ -144,10 +188,9 @@ int main()
     double **train_targets = NULL;
     load_mnist_data(TRAIN_SET, TRAIN_SAMPLES, &train_inputs, &train_targets);
 
-    // --- FASE 2: CREAZIONE RETE ---
+    // Network Topology
     printf("Topology creation...\n");
-    // 784 -> 64 -> 10 è leggero e veloce.
-    // Se vuoi più precisione prova 784 -> 128 -> 10
+    // 784 -> 64 -> 32 -> 10
     nnLayer *hidden = nnCreateLayer(64, MNIST_IMG_SIZE, ACTIVATION_SIGMOID);
     nnLayer *hidden_2 = nnCreateLayer(32, 64, ACTIVATION_SIGMOID);
     nnLayer *output = nnCreateLayer(MNIST_LABELS, 32, ACTIVATION_SIGMOID);
@@ -159,10 +202,10 @@ int main()
     addLayerToNetwork(network, hidden_2);
     addLayerToNetwork(network, output);
 
-    // --- FASE 3: TRAINING ---
+    // Training
     printf("Starting training (%d epochs, LR %.2f)...\n", EPOCHS, LR);
     train(network, train_inputs, train_targets, TRAIN_SAMPLES, LR, EPOCHS);
-    exportNetwork(network, MODEL_BAK);
+    nnDumpNetwork(network, MODEL_BAK);
 
     evaluate_accuracy(network, train_inputs, train_targets, TRAIN_SAMPLES, "TRAIN");
 
@@ -174,6 +217,17 @@ test:
     load_mnist_data(TEST_SET, TEST_SAMPLES, &test_inputs, &test_targets);
 
     evaluate_accuracy(network, test_inputs, test_targets, TEST_SAMPLES, "TEST");
+
+    // test on a custom image
+    double *image;
+    int w;
+    int h;
+    if (!load_pgm(CUSTOM_PGM, &image, &w, &h, 1))
+    {
+        double o[10];
+        predict(network, image, o);
+        printf("Predicted digit: %d\n", get_predicted_digit(o, 10));
+    }
 
     // --- FINAL CLEANUP ---
     free_data(test_inputs, test_targets, TEST_SAMPLES);

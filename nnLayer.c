@@ -47,8 +47,8 @@ void init_layer_random(nnLayer *layer)
 }
 
 // forward takes in input an array of input of size input_count
-// and fills output array of size neuron_count with the results
-void forward(nnLayer *layer, double *input, double *output)
+// the output is pointed to the output of the network (it will be available until forward is called again)
+void forward(nnLayer *layer, double *input, double **output)
 {
     for (int i = 0; i < layer->neuron_count; i++)
     {
@@ -60,7 +60,7 @@ void forward(nnLayer *layer, double *input, double *output)
         }
         layer->outputs[i] = activate(layer->activationFunction, sum);
     }
-    output = layer->outputs;
+    *output = layer->outputs;
 }
 
 /**

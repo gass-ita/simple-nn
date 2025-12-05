@@ -30,7 +30,7 @@ typedef struct nnLayer
 nnLayer *nnCreateLayer(int neuron_count, int input_count, nnActivationFunction activationFunction);
 void nnFreeLayer(nnLayer *layer);
 void nnPrintLayerInfo(const nnLayer *layer);
-void forward(nnLayer *layer, double *input, double *output);
+void forward(nnLayer *layer, double *input, double **output);
 void backward(nnLayer *layer, double *outputGradient, double *inputGradient, double learningRate);
 double activate(nnActivationFunction func, double x);
 double activateDerivative(nnActivationFunction func, double outputVal);

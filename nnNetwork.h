@@ -15,7 +15,7 @@ void train(nnNetwork *network, double **target_input, double **target_output, in
 void predict(nnNetwork *network, double *input, double *output);
 nnNetwork *nnCreateNetwork();
 int addLayerToNetwork(nnNetwork *network, nnLayer *layer);
-int exportNetwork(nnNetwork *network, const char *filename);
-nnNetwork *importNetwork(const char *filename);
+int nnDumpNetwork(nnNetwork *network, const char *filename);
+nnNetwork *nnLoadNetwork(const char *filename);
 void nnFreeNetwork(nnNetwork *network);
 #endif // NNNETWORK_H

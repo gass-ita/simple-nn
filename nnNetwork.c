@@ -29,7 +29,7 @@ int addLayerToNetwork(nnNetwork *network, nnLayer *layer)
 }
 
 // Binary Export (Deep Copy to File)
-int exportNetwork(nnNetwork *network, const char *filename)
+int nnDumpNetwork(nnNetwork *network, const char *filename)
 {
     FILE *f = fopen(filename, "wb");
     if (f == NULL)
@@ -68,7 +68,7 @@ int exportNetwork(nnNetwork *network, const char *filename)
 }
 
 // Binary Import (Rebuild from File)
-nnNetwork *importNetwork(const char *filename)
+nnNetwork *nnLoadNetwork(const char *filename)
 {
     FILE *f = fopen(filename, "rb");
     if (f == NULL)
@@ -134,10 +134,8 @@ void train(nnNetwork *network, double **target_input, double **target_output, in
     int layer_count = network->layer_count;
     nnLayer **layers = network->layers;
     int output_count = layers[layer_count - 1]->neuron_count;
-    // Allocazione di buffer temporanei per i gradienti.
-    // Usiamo MAX_NEURONS per essere sicuri che siano abbastanza grandi per qualsiasi layer.
-    // 'next_layer_grads' contiene i gradienti in arrivo dal layer successivo (o dalla loss function).
-    // 'prev_layer_grads' conterrà i gradienti calcolati da passare al layer precedente.
+    // 'next_layer_grads' has the gradients from the next layer produced by the back propagation.
+    // 'prev_layer_grads' will contain the gradients calculated to pass to the previous layer.
     double next_layer_grads[MAX_NEURONS];
     double prev_layer_grads[MAX_NEURONS];
 
@@ -149,48 +147,46 @@ void train(nnNetwork *network, double **target_input, double **target_output, in
 
         double total_loss = 0.0;
 
-        // Loop su ogni esempio del dataset (SGD)
+        // loop for each example given
         for (int i = 0; i < target_count; i++)
         {
             double *current_input = target_input[i];
             double *current_target = target_output[i];
 
-            // --- FASE 1: Forward Propagation ---
-            // Passiamo l'input attraverso tutti i layer
+            // Forward propagation, getting the prediction from the network
             for (int l = 0; l < layer_count; l++)
             {
-                // forward scrive i risultati in layers[l]->outputs
-                forward(layers[l], current_input, NULL);
-                // L'output di questo layer diventa l'input del prossimo
-                current_input = layers[l]->outputs;
+                // forward until the last layer
+                forward(layers[l], current_input, &current_input);
+                // current_input = layers[l]->outputs;
             }
 
-            // A questo punto, 'current_input' punta all'output dell'ultimo layer
+            // At this point, 'current_input' points to the output of the last layer
             double *final_output = current_input;
             nnLayer *last_layer = layers[layer_count - 1];
 
-            // --- Calcolo Loss e Gradiente Iniziale ---
-            // Usiamo MSE (Mean Squared Error).
-            // Gradiente rispetto all'output = 2 * (output - target)
+            // --- Calculate Loss and Initial Gradient ---
+            // Using MSE (Mean Squared Error).
+            // Gradient with respect to output = 2 * (output - target)
             for (int j = 0; j < output_count; j++)
             {
                 double error = final_output[j] - current_target[j];
-                total_loss += error * error; // Accumulo per statistiche (Loss = sum((y-t)^2))
+                total_loss += error * error; // Accumulate for statistics (Loss = sum((y-t)^2))
 
-                // Scriviamo il gradiente iniziale nel buffer
+                // Write the initial gradient to the buffer
                 next_layer_grads[j] = 2.0 * error;
             }
 
-            // --- FASE 2: Backward Propagation ---
-            // Iteriamo dai layer finali verso i primi
+            // --- PHASE 2: Backward Propagation ---
+            // Iterate from the last layer to the first
             for (int l = layer_count - 1; l >= 0; l--)
             {
                 nnLayer *curr_layer = layers[l];
 
-                // Aggiorna i pesi e calcola i gradienti per il layer precedente
+                // Update weights and calculate gradients for the previous layer
                 backward(curr_layer, next_layer_grads, prev_layer_grads, learning_rate);
 
-                // scambio i buffer per la prossima iterazione (indietro)
+                // swap buffers for the next iteration (backward)
                 memcpy(next_layer_grads, prev_layer_grads, curr_layer->input_count * sizeof(double));
             }
         }
@@ -237,18 +233,17 @@ void train(nnNetwork *network, double **target_input, double **target_output, in
     printf("Training completed\n");
 }
 
+// forwards the whole network and copy the output to the specified output array that must be allocated from the caller
 void predict(nnNetwork *network, double *input, double *output)
 {
     double *current_input = input;
 
-    // Passiamo l'input attraverso tutti i layer
     for (int l = 0; l < network->layer_count; l++)
     {
-        forward(network->layers[l], current_input, NULL);
-        current_input = network->layers[l]->outputs;
+        forward(network->layers[l], current_input, &current_input);
     }
 
-    // Copiamo l'output finale
+    // copy the final output to the output given by the user
     memcpy(output, current_input, network->layers[network->layer_count - 1]->neuron_count * sizeof(double));
 }
 
