@@ -9,7 +9,7 @@
 #define MODEL_BAK "trained_network.bin"
 #define TRAIN_SET "mnist_train.csv"
 #define TEST_SET "mnist_test.csv"
-#define CUSTOM_PGM "example.pgm"
+#define CUSTOM_PGM "6.pgm"
 #define TRAIN_SAMPLES 60000
 #define TEST_SAMPLES 10000
 
@@ -166,6 +166,11 @@ int load_pgm(const char *file_name, double **image, int *width, int *height, int
     return 0;
 }
 
+void free_pgm(double *image)
+{
+    free(image);
+}
+
 int main()
 {
 
@@ -226,11 +231,16 @@ test:
     {
         double o[10];
         predict(network, image, o);
+        for (int i = 0; i < 10; i++)
+        {
+            printf("Digit %d: %.4f\n", i, o[i]);
+        }
         printf("Predicted digit: %d\n", get_predicted_digit(o, 10));
     }
 
     // --- FINAL CLEANUP ---
     free_data(test_inputs, test_targets, TEST_SAMPLES);
+    free_pgm(image);
     nnFreeNetwork(network);
 
     return 0;

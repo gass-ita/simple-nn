@@ -156,18 +156,14 @@ void train(nnNetwork *network, double **target_input, double **target_output, in
             // Forward propagation, getting the prediction from the network
             for (int l = 0; l < layer_count; l++)
             {
-                // forward until the last layer
                 forward(layers[l], current_input, &current_input);
-                // current_input = layers[l]->outputs;
             }
 
-            // At this point, 'current_input' points to the output of the last layer
+            // the last value is stored in current_input
             double *final_output = current_input;
             nnLayer *last_layer = layers[layer_count - 1];
 
-            // --- Calculate Loss and Initial Gradient ---
-            // Using MSE (Mean Squared Error).
-            // Gradient with respect to output = 2 * (output - target)
+            // Initial gradient using MSE derivative
             for (int j = 0; j < output_count; j++)
             {
                 double error = final_output[j] - current_target[j];
@@ -177,8 +173,7 @@ void train(nnNetwork *network, double **target_input, double **target_output, in
                 next_layer_grads[j] = 2.0 * error;
             }
 
-            // --- PHASE 2: Backward Propagation ---
-            // Iterate from the last layer to the first
+            // backward propagation through layers
             for (int l = layer_count - 1; l >= 0; l--)
             {
                 nnLayer *curr_layer = layers[l];
@@ -227,9 +222,6 @@ void train(nnNetwork *network, double **target_input, double **target_output, in
                    eta_h, eta_m, eta_s);
         }
     }
-
-    // Pulizia memoria temporanea
-
     printf("Training completed\n");
 }
 
