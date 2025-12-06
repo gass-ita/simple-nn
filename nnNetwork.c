@@ -138,8 +138,11 @@ void train(nnNetwork *network, double **target_input, double **target_output, in
     int output_count = layers[layer_count - 1]->neuron_count;
     // 'next_layer_grads' has the gradients from the next layer produced by the back propagation.
     // 'prev_layer_grads' will contain the gradients calculated to pass to the previous layer.
-    double next_layer_grads[MAX_NEURONS];
-    double prev_layer_grads[MAX_NEURONS];
+    double grad_buffer_1[MAX_NEURONS];
+    double grad_buffer_2[MAX_NEURONS];
+
+    double *next_layer_grads = grad_buffer_1;
+    double *prev_layer_grads = grad_buffer_2;
 
     printf("Starting training %d epochs on %d samples...\n", epochs, target_count);
     clock_t total_start_time = clock();
@@ -184,7 +187,9 @@ void train(nnNetwork *network, double **target_input, double **target_output, in
                 backward(curr_layer, next_layer_grads, prev_layer_grads, learning_rate);
 
                 // swap buffers for the next iteration (backward)
-                memcpy(next_layer_grads, prev_layer_grads, curr_layer->input_count * sizeof(double));
+                double *temp = next_layer_grads;
+                next_layer_grads = prev_layer_grads;
+                prev_layer_grads = temp;
             }
         }
         // --- Calcoli Statistiche Epoca ---
