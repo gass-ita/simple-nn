@@ -166,7 +166,6 @@ void train(nnNetwork *network, double **target_input, double **target_output, in
 
             // the last value is stored in current_input
             double *final_output = current_input;
-            nnLayer *last_layer = layers[layer_count - 1];
 
             // Initial gradient using MSE derivative
             for (int j = 0; j < output_count; j++)
