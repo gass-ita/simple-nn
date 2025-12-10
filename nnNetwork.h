@@ -3,6 +3,8 @@
 #define NNNETWORK_H
 
 #include "nnLayer.h"
+
+// TODO: consider dynamic allocation for layers (avoided for simplicity)
 #define MAX_LAYERS 100
 
 typedef struct nnNetwork

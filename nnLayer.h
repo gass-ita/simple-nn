@@ -2,6 +2,7 @@
 #ifndef NNLAYER_H
 #define NNLAYER_H
 
+// TODO: consider dynamic allocation for weights and biases (avoided for simplicity)
 #define MAX_NEURONS 1024
 
 typedef enum ActivationFunction
