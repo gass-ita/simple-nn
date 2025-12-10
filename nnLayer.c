@@ -29,8 +29,8 @@ nnLayer *nnCreateLayer(int neuron_count, int input_count, nnActivationFunction a
     return layer;
 }
 
-// Helper per inizializzare i pesi in modo casuale (Essenziale!)
-// Inizializza pesi tra -1.0 e 1.0
+// Init weights and biases with random values between -1.0 and 1.0
+// TODO: improve initialization method (Xavier, He, etc.)
 void init_layer_random(nnLayer *layer)
 {
     for (int i = 0; i < layer->neuron_count; i++)
@@ -64,41 +64,34 @@ void forward(nnLayer *layer, double *input, double **output)
 }
 
 /**
- * layer: puntatore al layer corrente
- * outputGradient: gradienti ricevuti dal layer successivo (size: neuron_count)
- * inputGradient: array DOVE SCRIVERE i gradienti per il layer precedente (size: input_count)
- * learningRate: fattore di apprendimento (es. 0.01)
+ * layer: pointer to the current layer
+ * outputGradient: gradients received from the next layer (size: neuron_count)
+ * inputGradient: array WHERE TO WRITE the gradients for the previous layer (size: input_count)
+ * learningRate: learning rate for weight updates
  */
 void backward(nnLayer *layer, double *outputGradient, double *inputGradient, double learningRate)
 {
-    // 1. Puliamo l'inputGradient (sarà un accumulatore)
     for (int i = 0; i < layer->input_count; i++)
     {
         inputGradient[i] = 0.0;
     }
 
-    // 2. Iteriamo su ogni neurone del layer corrente
     for (int j = 0; j < layer->neuron_count; j++)
     {
-        // Calcolo del Delta del neurone (Errore Locale)
-        // Delta = Gradiente * Derivata(Output)
+        // Calculate local gradient (Delta)
         double derivative = activateDerivative(layer->activationFunction, layer->outputs[j]);
         double delta = outputGradient[j] * derivative;
 
-        // 3. Aggiornamento del Bias
-        // bias_new = bias_old - (learning_rate * delta)
+        // Update the bias using the gradient descent
         layer->bias[j] -= delta * learningRate;
 
         // 4. Calcolo gradienti per i pesi e propagazione indietro
         for (int i = 0; i < layer->input_count; i++)
         {
-            // A. Calcolo del gradiente da passare indietro (Backpropagation)
-            // dE/dX_i += Delta_j * W_ji
-            // Nota: usiamo il peso attuale prima di aggiornarlo (o una copia),
-            // ma per SGD semplice usare il peso corrente è un'approssimazione accettabile.
+            // Calculate the gradient to pass to the previous layer
             inputGradient[i] += delta * layer->weights[j][i];
 
-            // B. Aggiornamento del Peso
+            // adjust the weights
             // weight_new = weight_old - (learning_rate * input * delta)
             double weightGradient = layer->inputs[i] * delta;
             layer->weights[j][i] -= weightGradient * learningRate;
