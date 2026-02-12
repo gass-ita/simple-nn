@@ -6,6 +6,7 @@
 #include <time.h>
 #include <string.h>
 
+
 #define MODEL_BAK "trained_network.bin"
 #define TRAIN_SET "mnist_train.csv"
 #define TEST_SET "mnist_test.csv"
